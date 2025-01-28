@@ -1,0 +1,13 @@
+pandas
+numpy
+matplotlib
+torch==2.5.1
+transformers==4.48.0
+datasets==3.0.1
+accelerate==1.0.1
+ipykernel
+fastapi==0.115.2
+uvicorn==0.32.0
+vllm==0.6.6.post1
+ninja
+pytest

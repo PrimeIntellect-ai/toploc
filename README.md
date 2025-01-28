@@ -1,6 +1,6 @@
-# TOPLOC: Trustless Verifiable Inference for Large Language Models
+# TOPLOC: A Locality Sensitive Hashing Scheme for Trustless Verifiable Inference
 
-[TOPLOC](https://arxiv.org/abs/2501.16007) is a novel method for verifiable inference that enables users to verify that LLM providers are using the correct model configurations and settings. It leverages locality sensitive hashing for intermediate activations to detect unauthorized modifications with 100% accuracy.
+[TOPLOC](https://arxiv.org/abs/2501.16007) is a novel method for verifiable inference that enables users to verify that LLM providers are using the correct model configurations and settings. It leverages locality sensitive hashing for intermediate activations to detect unauthorized modifications.
 
 ## Features
 
@@ -9,13 +9,6 @@
 - Validation speeds up to 100x faster than original inference
 - Robust across different hardware configurations and implementations
 - Zero false positives/negatives in empirical testing
-
-## integration
-
-toploc is integrated with popular inference engine:
-
-- Integrated with [vLLM](https://github.com/vllm-project/vllm) for efficient inference
-- SGLang support via our [fork](https://github.com/PrimeIntellect-ai/sglang)
 
 ## Key Components
 
@@ -36,10 +29,10 @@ toploc is integrated with popular inference engine:
 ## Integrations
 
 ### vLLM
-TOPLOC is integrated with vLLM for efficient inference and validation. The integration allows you to leverage vLLM's optimized inference pipeline while maintaining verification capabilities.
+TOPLOC is integrated with vLLM for efficient inference and validation as part of this repository. The integration allows you to leverage vLLM's optimized inference pipeline while maintaining verification capabilities.
 
 ### SGLang
-We maintain a [fork of SGLang](https://github.com/PrimeIntellect-ai/sglang) that includes TOPLOC integration, enabling verifiable inference with SGLang's programming model.
+We maintain a [fork of SGLang](https://github.com/PrimeIntellect-ai/sglang) that includes TOPLOC integration, enabling verifiable inference with SGLang's framework.
 
 ## How to use the code
 
@@ -50,17 +43,17 @@ git clone https://github.com/PrimeIntellect/toploc.git
 pip install -r requirements.txt
 ```
 
-### run Experiments
+### Run Experiments
 
 This is an example on running validation with Llama-3.1-8B-Instruct over the ultrachat dataset.
 
 First, generate the polynomial encodings for the model using:
 
 ```bash
-python vllm_generate_poly.py --model_name meta-llama/Llama-3.1-8B-Instruct --tp 1 --n_samples 4 --save_dir just4 --max_decode_tokens 512 --dataset_name stingning/ultrachat --dtype bfloat16
+python vllm_generate_poly.py --model_name meta-llama/Llama-3.1-8B-Instruct --tp 1 --n_samples 4 --save_dir signatures --max_decode_tokens 512 --dataset_name stingning/ultrachat --dtype bfloat16
 ```
 
-this should create a directory called `just4` with the polynomial encodings for the model.
+This should create a directory called `signatures` with the polynomial encodings for the model.
 
 You can then run validation with:
 
@@ -68,13 +61,13 @@ You can then run validation with:
 python vllm_validate_poly.py --decode_model_name meta-llama/Llama-3.1-8B-Instruct --validate_model_name meta-llama/Llama-3.1-8B-Instruct --tp 1 --n_samples 4 --save_dir just4 --max_decode_tokens 512 --dataset_name stingning/ultrachat --dtype bfloat16 --attn flash
 ```
 
-if the verification passes, you should see :
+If the verification passes, you should see:
 
 ```
 VERIFICATION PASSED: Mantissa error mean: 0. below 10 and median: 0. below 8 and exp intersections: 100 below 90
 ```
 
-and if it fails, you should see something like:
+And if it fails, you should see something like:
 
 ```
 VERIFICATION FAILED: Mantissa error mean: 11.000000 above 10 or median: 10.000000 above 8 or exp intersections: 0 above 90  

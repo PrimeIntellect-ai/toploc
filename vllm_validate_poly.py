@@ -127,7 +127,7 @@ def main(args):
         )
         
         topk_res, exp_res, mant_means, mant_medians = check(activations, polys[i])
-        #print(f"Topk: {topk_res}, Exp: {exp_res}, Mant Mean: {mant_means}, Mant Median: {mant_medians}")
+        # print(f"Topk: {topk_res}, Exp: {exp_res}, Mant Mean: {mant_means}, Mant Median: {mant_medians}")
 
         names.extend([f"Q{i}_{j}" for j in range(len(topk_res))])
         topk_intersections.extend(topk_res)

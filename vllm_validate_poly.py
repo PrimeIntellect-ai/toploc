@@ -72,11 +72,13 @@ def check(activations: list[torch.Tensor], proof: list[str]) -> tuple[list[int],
         else:
             mant_err_means.append(mean(mant_errs))
             mant_err_medians.append(median(mant_errs))
-            
-    if mant_err_means > TMEAN or mant_err_medians > TMEDIAN or exp_intersections < TEXP:   
-        print(f"VERIFICATION FAILED: Mantissa error mean: {mant_err_means} above {TMEAN} or median: {mant_err_medians} above {TMEDIAN} or exp intersections: {exp_intersections} below {TEXP}")
-    else:
-        print(f"VERIFICATION PASSED: Mantissa error mean: {mant_err_means} below {TMEAN} and median: {mant_err_medians} below {TMEDIAN} and exp intersections: {exp_intersections} above {TEXP}")
+      
+    for mant_err_mean, mant_err_median, exp_intersection in zip(mant_err_means, mant_err_medians, exp_intersections):
+        if mant_err_mean > TMEAN or mant_err_median > TMEDIAN or exp_intersection < TEXP:   
+            print(f"VERIFICATION FAILED: Mantissa error mean: {mant_err_mean} above {TMEAN} or median: {mant_err_median} above {TMEDIAN} or exp intersections: {exp_intersection} below {TEXP}")
+        else:
+            print(f"VERIFICATION PASSED: Mantissa error mean: {mant_err_means} below {TMEAN} and median: {mant_err_medians} below {TMEDIAN} and exp intersections: {exp_intersections} above {TEXP}")
+        
     return topk_intersections, exp_intersections, mant_err_means, mant_err_medians
 
 def segment_prefill_activations(activations: torch.Tensor, max_decode_tokens: int, decode_batching_size: int) -> list[torch.Tensor]:

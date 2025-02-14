@@ -39,8 +39,52 @@ We maintain a [fork of SGLang](https://github.com/PrimeIntellect-ai/sglang) that
 ### Installation
 
 ```bash
-git clone https://github.com/PrimeIntellect/toploc.git
-pip install -r requirements.txt
+pip install -U toploc
+```
+
+### Development Setup
+
+1. Install uv:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
+```
+
+2. Setup virtual environment:
+This can take awhile because of the C extensions.
+```bash
+uv venv --python 3.12
+source .venv/bin/activate
+uv sync --dev
+```
+
+### Running Tests
+
+Run the test suite:
+```bash
+uv run pytest tests
+```
+
+Run single file:
+```bash
+uv run pytest tests/test_utils.py
+```
+
+Run single test:
+```bash
+uv run pytest tests/test_utils.py::test_get_fp32_parts
+```
+
+### Code Quality
+
+Install pre-commit hooks:
+```bash
+uv run pre-commit install
+```
+
+Run linting and formatting on all files:
+```bash
+pre-commit run --all-files
 ```
 
 ### Run Experiments

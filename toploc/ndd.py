@@ -1,3 +1,4 @@
+# TODO: Deprecate this file and move to C
 MOD_N = 65497
 
 

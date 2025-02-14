@@ -1,3 +1,4 @@
+from typing import Union
 import base64
 from toploc.C.csrc.ndd import compute_newton_coefficients, evaluate_polynomial
 import torch
@@ -30,7 +31,7 @@ class ProofPoly:
 
     @classmethod
     def from_points(
-        cls, x: list[int] | torch.Tensor, y: list[int] | torch.Tensor
+        cls, x: Union[list[int], torch.Tensor], y: Union[list[int], torch.Tensor]
     ) -> "ProofPoly":
         if isinstance(x, torch.Tensor):
             x = x.tolist()

@@ -2,6 +2,8 @@
 
 [TOPLOC](https://arxiv.org/abs/2501.16007) is a novel method for verifiable inference that enables users to verify that LLM providers are using the correct model configurations and settings. It leverages locality sensitive hashing for intermediate activations to detect unauthorized modifications.
 
+For code used in our experiments, check out: https://github.com/PrimeIntellect-ai/toploc-experiments
+
 ### Installation
 
 ```bash

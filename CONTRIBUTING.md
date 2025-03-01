@@ -65,6 +65,11 @@ Run single test:
 uv run pytest tests/test_utils.py::test_get_fp32_parts
 ```
 
+Run coverage:
+```bash
+uv run pytest --cov=toploc --cov-report=term-missing --cov-report=html
+```
+
 ## Code Quality
 
 Install pre-commit hooks:

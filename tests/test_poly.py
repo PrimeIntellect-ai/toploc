@@ -156,11 +156,21 @@ def test_build_proofs_base64(sample_activations):
 def test_build_proofs_skip_prefill(sample_activations):
     """Test building proofs with skip_prefill"""
     proofs = build_proofs_bytes(
-        sample_activations, decode_batching_size=2, topk=5, skip_prefill=True
+        sample_activations[1:], decode_batching_size=2, topk=5, skip_prefill=True
     )
     assert isinstance(proofs, list)
     assert all(isinstance(p, bytes) for p in proofs)
     assert len(proofs) == 4
+
+    proofs = build_proofs_base64(
+        torch.randn(17, 16, dtype=torch.bfloat16),
+        decode_batching_size=4,
+        topk=5,
+        skip_prefill=True,
+    )
+    assert isinstance(proofs, list)
+    assert all(isinstance(p, str) for p in proofs)
+    assert len(proofs) == 5
 
 
 def test_build_proofs_error_handling():
@@ -197,7 +207,7 @@ def test_build_proofs_edge_cases(sample_activations):
 
     # Test with only one activation and skip_prefill
     proofs_one_skip = build_proofs_bytes(
-        sample_activations[:1], decode_batching_size=2, topk=5, skip_prefill=True
+        sample_activations[1:1], decode_batching_size=2, topk=5, skip_prefill=True
     )
     assert len(proofs_one_skip) == 0
 
@@ -286,3 +296,25 @@ def test_verify_proofs_base64_no_intersection_invalid(sample_activations):
     assert all(r.exp_mismatches == 5 for r in results)
     assert all(r.mant_err_mean > 2**32 for r in results)
     assert all(r.mant_err_median > 2**32 for r in results)
+
+
+def test_verify_proofs_bytes_skip_prefill(sample_activations):
+    """Test verification of invalid bytes proofs with skip_prefill"""
+    # Generate invalid proofs in bytes format
+    activations = torch.randn(16, 16, dtype=torch.bfloat16)
+    proofs_bytes = build_proofs_bytes(
+        activations, decode_batching_size=3, topk=4, skip_prefill=True
+    )
+
+    assert len(proofs_bytes) == 6
+
+    results = verify_proofs_bytes(
+        activations, proofs_bytes, decode_batching_size=3, topk=4, skip_prefill=True
+    )
+
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_bytes)
+    assert all(r.exp_mismatches == 0 for r in results)
+    assert all(r.mant_err_mean == 0 for r in results)
+    assert all(r.mant_err_median == 0 for r in results)

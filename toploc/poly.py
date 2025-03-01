@@ -97,7 +97,9 @@ def build_proofs(
             proofs.append(proof)
 
         # Batched Decode
-        for i in range(1, len(activations), decode_batching_size):
+        for i in range(
+            0 if skip_prefill else 1, len(activations), decode_batching_size
+        ):
             flat_view = torch.cat(
                 [i.view(-1) for i in activations[i : i + decode_batching_size]]
             )
@@ -151,7 +153,7 @@ def batch_activations(
         batches.append(flat_view)
 
     # Batched Decode
-    for i in range(1, len(activations), decode_batching_size):
+    for i in range(0 if skip_prefill else 1, len(activations), decode_batching_size):
         flat_view = torch.cat(
             [i.view(-1) for i in activations[i : i + decode_batching_size]]
         )

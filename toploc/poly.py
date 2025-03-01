@@ -1,8 +1,11 @@
 from typing import Union
 import base64
 from toploc.C.csrc.ndd import compute_newton_coefficients, evaluate_polynomial
+from toploc.C.csrc.utils import get_fp_parts
 import torch
 import logging
+from dataclasses import dataclass
+from statistics import mean, median
 
 logger = logging.getLogger(__name__)
 
@@ -138,12 +141,14 @@ def build_proofs_base64(
 def batch_activations(
     activations: list[torch.Tensor],
     decode_batching_size: int,
+    skip_prefill: bool = False,
 ) -> list[torch.Tensor]:
     batches = []
 
     # Prefill
-    flat_view = activations[0].view(-1)
-    batches.append(flat_view)
+    if not skip_prefill:
+        flat_view = activations[0].view(-1)
+        batches.append(flat_view)
 
     # Batched Decode
     for i in range(1, len(activations), decode_batching_size):
@@ -153,3 +158,79 @@ def batch_activations(
         batches.append(flat_view)
 
     return batches
+
+
+@dataclass
+class VerificationResult:
+    exp_intersections: int
+    mant_err_mean: float
+    mant_err_median: float
+
+
+def verify_proofs(
+    activations: list[torch.Tensor],
+    proofs: list[ProofPoly],
+    decode_batching_size: int,
+    topk: int,
+    skip_prefill: bool = False,
+) -> list[VerificationResult]:
+    results = []
+    for proof, chunk in zip(
+        proofs,
+        batch_activations(
+            activations,
+            decode_batching_size=decode_batching_size,
+            skip_prefill=skip_prefill,
+        ),
+    ):
+        chunk = chunk.view(-1).cpu()
+        topk_indices = chunk.abs().topk(k=topk).indices.tolist()
+        topk_values = chunk[topk_indices]
+        proof_topk_values = torch.tensor(
+            [proof(i) for i in topk_indices], dtype=torch.uint16
+        ).view(dtype=torch.bfloat16)
+        exps, mants = get_fp_parts(proof_topk_values)
+        proof_exps, proof_mants = get_fp_parts(topk_values)
+
+        exp_intersections = [i == j for i, j in zip(exps, proof_exps)]
+        mant_errs = [
+            abs(i - j) for i, j, k in zip(mants, proof_mants, exp_intersections) if k
+        ]
+        results.append(
+            VerificationResult(
+                sum(exp_intersections), mean(mant_errs), median(mant_errs)
+            )
+        )
+    return results
+
+
+def verify_proofs_bytes(
+    activations: list[torch.Tensor],
+    proofs: list[bytes],
+    decode_batching_size: int,
+    topk: int,
+    skip_prefill: bool = False,
+) -> list[VerificationResult]:
+    return verify_proofs(
+        activations,
+        [ProofPoly.from_bytes(proof) for proof in proofs],
+        decode_batching_size,
+        topk,
+        skip_prefill,
+    )
+
+
+def verify_proofs_base64(
+    activations: list[torch.Tensor],
+    proofs: list[str],
+    decode_batching_size: int,
+    topk: int,
+    skip_prefill: bool = False,
+) -> list[VerificationResult]:
+    return verify_proofs(
+        activations,
+        [ProofPoly.from_base64(proof) for proof in proofs],
+        decode_batching_size,
+        topk,
+        skip_prefill,
+    )

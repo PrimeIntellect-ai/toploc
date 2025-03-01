@@ -3,7 +3,7 @@ import torch
 import base64
 from toploc.poly import (
     find_injective_modulus,
-    build_proofs,
+    build_proofs_bytes,
     build_proofs_base64,
     ProofPoly,
 )
@@ -132,7 +132,7 @@ def sample_activations():
 
 def test_build_proofs(sample_activations):
     """Test building proofs"""
-    proofs = build_proofs(sample_activations, decode_batching_size=2, topk=5)
+    proofs = build_proofs_bytes(sample_activations, decode_batching_size=2, topk=5)
     assert isinstance(proofs, list)
     assert all(isinstance(p, bytes) for p in proofs)
     assert len(proofs) == 5
@@ -151,7 +151,7 @@ def test_build_proofs_base64(sample_activations):
 
 def test_build_proofs_skip_prefill(sample_activations):
     """Test building proofs with skip_prefill"""
-    proofs = build_proofs(
+    proofs = build_proofs_bytes(
         sample_activations, decode_batching_size=2, topk=5, skip_prefill=True
     )
     assert isinstance(proofs, list)
@@ -165,7 +165,7 @@ def test_build_proofs_error_handling():
         torch.randn(0, 16, dtype=torch.bfloat16),
         torch.randn(16, dtype=torch.bfloat16),
     ]
-    proofs = build_proofs(invalid_activations, decode_batching_size=2, topk=5)
+    proofs = build_proofs_bytes(invalid_activations, decode_batching_size=2, topk=5)
     assert isinstance(proofs, list)
     assert all(isinstance(p, bytes) for p in proofs)
 
@@ -176,21 +176,23 @@ def test_build_proofs_error_handling():
 def test_build_proofs_edge_cases(sample_activations):
     """Test edge cases for proof building"""
     # Test with minimal topk
-    proofs_min = build_proofs(sample_activations, decode_batching_size=2, topk=1)
+    proofs_min = build_proofs_bytes(sample_activations, decode_batching_size=2, topk=1)
     assert len(proofs_min) > 0
 
     # Test with large batching size
-    proofs_large_batch = build_proofs(
+    proofs_large_batch = build_proofs_bytes(
         sample_activations, decode_batching_size=10, topk=5
     )
     assert len(proofs_large_batch) > 0
 
     # Test with only one prefill activation
-    proofs_one = build_proofs(sample_activations[:1], decode_batching_size=2, topk=5)
+    proofs_one = build_proofs_bytes(
+        sample_activations[:1], decode_batching_size=2, topk=5
+    )
     assert len(proofs_one) == 1
 
     # Test with only one activation and skip_prefill
-    proofs_one_skip = build_proofs(
+    proofs_one_skip = build_proofs_bytes(
         sample_activations[:1], decode_batching_size=2, topk=5, skip_prefill=True
     )
     assert len(proofs_one_skip) == 0

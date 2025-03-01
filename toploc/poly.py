@@ -80,34 +80,6 @@ def build_proofs(
     decode_batching_size: int,
     topk: int,
     skip_prefill: bool = False,
-) -> list[bytes]:
-    return [
-        proof.to_bytes()
-        for proof in _build_proofs(
-            activations, decode_batching_size, topk, skip_prefill
-        )
-    ]
-
-
-def build_proofs_base64(
-    activations: list[torch.Tensor],
-    decode_batching_size: int,
-    topk: int,
-    skip_prefill: bool = False,
-) -> list[str]:
-    return [
-        proof.to_base64()
-        for proof in _build_proofs(
-            activations, decode_batching_size, topk, skip_prefill
-        )
-    ]
-
-
-def _build_proofs(
-    activations: list[torch.Tensor],
-    decode_batching_size: int,
-    topk: int,
-    skip_prefill: bool = False,
 ) -> list[ProofPoly]:
     proofs = []
 
@@ -137,3 +109,47 @@ def _build_proofs(
         )
 
     return proofs
+
+
+def build_proofs_bytes(
+    activations: list[torch.Tensor],
+    decode_batching_size: int,
+    topk: int,
+    skip_prefill: bool = False,
+) -> list[bytes]:
+    return [
+        proof.to_bytes()
+        for proof in build_proofs(activations, decode_batching_size, topk, skip_prefill)
+    ]
+
+
+def build_proofs_base64(
+    activations: list[torch.Tensor],
+    decode_batching_size: int,
+    topk: int,
+    skip_prefill: bool = False,
+) -> list[str]:
+    return [
+        proof.to_base64()
+        for proof in build_proofs(activations, decode_batching_size, topk, skip_prefill)
+    ]
+
+
+def batch_activations(
+    activations: list[torch.Tensor],
+    decode_batching_size: int,
+) -> list[torch.Tensor]:
+    batches = []
+
+    # Prefill
+    flat_view = activations[0].view(-1)
+    batches.append(flat_view)
+
+    # Batched Decode
+    for i in range(1, len(activations), decode_batching_size):
+        flat_view = torch.cat(
+            [i.view(-1) for i in activations[i : i + decode_batching_size]]
+        )
+        batches.append(flat_view)
+
+    return batches

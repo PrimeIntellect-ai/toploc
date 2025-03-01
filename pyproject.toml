@@ -34,6 +34,7 @@ dev-dependencies = [
     "ruff",
     "pre-commit",
     "pytest",
+    "pytest-cov"
 ]
 
 [tool.setuptools.dynamic]

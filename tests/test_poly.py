@@ -263,3 +263,26 @@ def test_verify_proofs_bytes_invalid(sample_activations):
     assert all(r.exp_mismatches <= 2 for r in results)
     assert all(r.mant_err_mean > 10 for r in results)
     assert all(r.mant_err_median > 10 for r in results)
+
+
+def test_verify_proofs_base64_no_intersection_invalid(sample_activations):
+    """Test verification of invalid base64 proofs"""
+    # Generate invalid proofs in base64 format
+    proofs_base64 = build_proofs_base64(
+        sample_activations, decode_batching_size=2, topk=5
+    )
+
+    results = verify_proofs_base64(
+        [i * 4 for i in sample_activations],
+        proofs_base64,
+        decode_batching_size=2,
+        topk=5,
+    )
+
+    print(results)
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_base64)
+    assert all(r.exp_mismatches == 5 for r in results)
+    assert all(r.mant_err_mean > 2**32 for r in results)
+    assert all(r.mant_err_median > 2**32 for r in results)

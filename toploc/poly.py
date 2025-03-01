@@ -199,9 +199,14 @@ def verify_proofs(
         mant_errs = [
             abs(i - j) for i, j, k in zip(mants, proof_mants, exp_mismatches) if not k
         ]
-        results.append(
-            VerificationResult(sum(exp_mismatches), mean(mant_errs), median(mant_errs))
-        )
+        if len(mant_errs) > 0:
+            results.append(
+                VerificationResult(
+                    sum(exp_mismatches), mean(mant_errs), median(mant_errs)
+                )
+            )
+        else:
+            results.append(VerificationResult(sum(exp_mismatches), 2**64, 2**64))
     return results
 
 

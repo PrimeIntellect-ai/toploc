@@ -160,9 +160,12 @@ def batch_activations(
     return batches
 
 
+# NOTE (Jack): Attributes should always be a measure of error, increasing the further we are from the proof
+# This way, acceptance is always below the threshold and rejection is always above
+# e.g. exp_match is bad, exp_mismatch is good
 @dataclass
 class VerificationResult:
-    exp_intersections: int
+    exp_mismatches: int
     mant_err_mean: float
     mant_err_median: float
 
@@ -192,14 +195,12 @@ def verify_proofs(
         exps, mants = get_fp_parts(proof_topk_values)
         proof_exps, proof_mants = get_fp_parts(topk_values)
 
-        exp_intersections = [i == j for i, j in zip(exps, proof_exps)]
+        exp_mismatches = [i != j for i, j in zip(exps, proof_exps)]
         mant_errs = [
-            abs(i - j) for i, j, k in zip(mants, proof_mants, exp_intersections) if k
+            abs(i - j) for i, j, k in zip(mants, proof_mants, exp_mismatches) if not k
         ]
         results.append(
-            VerificationResult(
-                sum(exp_intersections), mean(mant_errs), median(mant_errs)
-            )
+            VerificationResult(sum(exp_mismatches), mean(mant_errs), median(mant_errs))
         )
     return results
 

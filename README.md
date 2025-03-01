@@ -10,15 +10,15 @@ The feature set includes:
 
 For code used by experiments in our paper, check out: https://github.com/PrimeIntellect-ai/toploc-experiments
 
-### Installation
+## Installation
 
 ```bash
 pip install -U toploc
 ```
 
-### Usage
+## Usage
 
-#### Build proofs from activations:
+### Build proofs from activations:
 As bytes (more compact when stored in binary formats):
 ```python
 import torch
@@ -53,38 +53,30 @@ Activation shapes: [torch.Size([1, 5, 16]), torch.Size([1, 16]), torch.Size([1, 
 Proofs: ['/9kbQitnukt1bQ==', '/9nLuJrxhiVUoA==', '/9m0aNrm5KtBtg==', '/9mAZNZYMOKvcw==', '/9nSBGTqkZH21w==']
 ```
 
-#### Verify proofs:
+### Verify proofs:
 ```python
 import torch
-from toploc import ProofPoly
-from toploc.poly import batch_activations
-from toploc.C.csrc.utils import get_fp_parts
-from statistics import mean, median
+from toploc import verify_proofs_base64
 
 torch.manual_seed(42)
 activations = [torch.randn(1, 5, 16, dtype=torch.bfloat16), *(torch.randn(1, 16, dtype=torch.bfloat16) for _ in range(10))]
 proofs = ['/9kbQitnukt1bQ==', '/9nLuJrxhiVUoA==', '/9m0aNrm5KtBtg==', '/9mAZNZYMOKvcw==', '/9nSBGTqkZH21w==']
-proofs = [ProofPoly.from_base64(proof) for proof in proofs]
-
 # apply some jitter to the activations
 activations = [i * 1.01 for i in activations]
 
-for index, (proof, chunk) in enumerate(zip(proofs, batch_activations(activations, decode_batching_size=3))):
-    chunk = chunk.view(-1).cpu()
-    topk_indices = chunk.abs().topk(k=4).indices.tolist()
-    topk_values = chunk[topk_indices]
-    proof_topk_values = torch.tensor([proof(i) for i in topk_indices], dtype=torch.uint16).view(dtype=torch.bfloat16)
-    exps, mants = get_fp_parts(proof_topk_values)
-    proof_exps, proof_mants = get_fp_parts(topk_values)
+results = verify_proofs_base64(activations, proofs, decode_batching_size=3, topk=4, skip_prefill=False)
 
-    exp_intersections = [i == j for i, j in zip(exps, proof_exps)]
-    mant_errs = [abs(i - j) for i, j, k in zip(mants, proof_mants, exp_intersections) if k]
-    print(f"=== Proof {index}")
-    print(f"Exp intersections: {sum(exp_intersections)}")
-    print(f"Mean mantissa error: {mean(mant_errs)}")
-    print(f"Median mantissa error: {median(mant_errs)}")
+print("Results:")
+print(*results, sep="\n")
 ```
-
+```python
+Results:
+VerificationResult(exp_intersections=4, mant_err_mean=1.75, mant_err_median=2.0)
+VerificationResult(exp_intersections=4, mant_err_mean=2, mant_err_median=2.0)
+VerificationResult(exp_intersections=4, mant_err_mean=1.25, mant_err_median=1.0)
+VerificationResult(exp_intersections=4, mant_err_mean=1, mant_err_median=1.0)
+VerificationResult(exp_intersections=4, mant_err_mean=2, mant_err_median=2.0)
+```
 
 # Citing
 

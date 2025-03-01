@@ -1,0 +1,15 @@
+[run]
+source = toploc
+omit =
+    toploc/__init__.py
+    toploc/C/csrc/__init__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError 
+    

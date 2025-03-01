@@ -219,7 +219,7 @@ def test_verify_proofs_bytes(sample_activations):
     assert isinstance(results, list)
     assert all(isinstance(r, VerificationResult) for r in results)
     assert len(results) == len(proofs_bytes)
-    assert all(r.exp_intersections == 4 for r in results)
+    assert all(r.exp_mismatches == 0 for r in results)
     assert all(r.mant_err_mean > 0 and r.mant_err_mean <= 2 for r in results)
     assert all(r.mant_err_median > 0 and r.mant_err_median <= 2 for r in results)
 
@@ -238,7 +238,7 @@ def test_verify_proofs_base64(sample_activations):
     assert isinstance(results, list)
     assert all(isinstance(r, VerificationResult) for r in results)
     assert len(results) == len(proofs_base64)
-    assert all(r.exp_intersections == 5 for r in results)
+    assert all(r.exp_mismatches == 0 for r in results)
     assert all(r.mant_err_mean == 0 for r in results)
     assert all(r.mant_err_median == 0 for r in results)
 
@@ -260,6 +260,6 @@ def test_verify_proofs_bytes_invalid(sample_activations):
     assert isinstance(results, list)
     assert all(isinstance(r, VerificationResult) for r in results)
     assert len(results) == len(proofs_bytes)
-    assert all(r.exp_intersections >= 3 for r in results)
+    assert all(r.exp_mismatches <= 2 for r in results)
     assert all(r.mant_err_mean > 10 for r in results)
     assert all(r.mant_err_median > 10 for r in results)

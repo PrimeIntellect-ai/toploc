@@ -2,6 +2,8 @@ from toploc.C.csrc.utils import get_fp_parts
 import torch
 import time
 import pytest
+import tempfile
+from toploc.utils import sha256sum
 
 
 @pytest.mark.parametrize(
@@ -114,3 +116,13 @@ def test_get_bf16_parts(tensor_shape: tuple[int, ...]) -> None:
     assert exps == ref_exps
     assert mantissas == ref_mants
     assert new_time < old_time
+
+
+def test_sha256sum():
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(b"Hello, world!" * 1000)
+        f.flush()
+        assert (
+            sha256sum(f.name)
+            == "a8f764e70df94be2c911fb51b3d0c56c03882078dbdb215de8b7bd0374b0fb10"
+        )

@@ -14,7 +14,7 @@ def find_injective_modulus(x: list[int]) -> int:
     for i in range(65497, 2**15, -1):
         if len(set([j % i for j in x])) == len(x):
             return i
-    raise ValueError("No injective modulus found!")
+    raise ValueError("No injective modulus found!")  # pragma: no cover
 
 
 class ProofPoly:

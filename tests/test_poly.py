@@ -6,6 +6,9 @@ from toploc.poly import (
     build_proofs_bytes,
     build_proofs_base64,
     ProofPoly,
+    VerificationResult,
+    verify_proofs_bytes,
+    verify_proofs_base64,
 )
 
 
@@ -196,3 +199,66 @@ def test_build_proofs_edge_cases(sample_activations):
         sample_activations[:1], decode_batching_size=2, topk=5, skip_prefill=True
     )
     assert len(proofs_one_skip) == 0
+
+
+def test_verify_proofs_bytes(sample_activations):
+    """Test verification of proofs in bytes format"""
+    # Generate proofs in bytes format
+    proofs_bytes = build_proofs_bytes(
+        sample_activations, decode_batching_size=3, topk=4
+    )
+
+    results = verify_proofs_bytes(
+        [i * 1.01 for i in sample_activations],
+        proofs_bytes,
+        decode_batching_size=3,
+        topk=4,
+    )
+
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_bytes)
+    assert all(r.exp_intersections == 4 for r in results)
+    assert all(r.mant_err_mean > 0 and r.mant_err_mean <= 2 for r in results)
+    assert all(r.mant_err_median > 0 and r.mant_err_median <= 2 for r in results)
+
+
+def test_verify_proofs_base64(sample_activations):
+    """Test verification of proofs in base64 format"""
+    # Generate proofs in base64 format
+    proofs_base64 = build_proofs_base64(
+        sample_activations, decode_batching_size=2, topk=5
+    )
+
+    results = verify_proofs_base64(
+        sample_activations, proofs_base64, decode_batching_size=2, topk=5
+    )
+
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_base64)
+    assert all(r.exp_intersections == 5 for r in results)
+    assert all(r.mant_err_mean == 0 for r in results)
+    assert all(r.mant_err_median == 0 for r in results)
+
+
+def test_verify_proofs_bytes_invalid(sample_activations):
+    # Generate proofs in bytes format
+    proofs_bytes = build_proofs_bytes(
+        sample_activations, decode_batching_size=3, topk=4
+    )
+
+    results = verify_proofs_bytes(
+        [i * 1.10 for i in sample_activations],
+        proofs_bytes,
+        decode_batching_size=3,
+        topk=4,
+    )
+
+    print(results)
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_bytes)
+    assert all(r.exp_intersections == 4 for r in results)
+    assert all(r.mant_err_mean > 10 for r in results)
+    assert all(r.mant_err_median > 10 for r in results)

@@ -31,7 +31,7 @@ proofs = build_proofs_bytes(activations, decode_batching_size=3, topk=4, skip_pr
 print(f"Activation shapes: {[i.shape for i in activations]}")
 print(f"Proofs: {proofs}")
 ```
-```python
+```bash
 Activation shapes: [torch.Size([5, 16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16]), torch.Size([16])]
 Proofs: [b'\xff\xd9\x1bB+g\xbaKum', b'\xff\xd9\xcb\xb8\x9a\xf1\x86%T\xa0', b'\xff\xd9\xb4h\xda\xe6\xe4\xabA\xb6', b'\xff\xd9\x80d\xd6X0\xe2\xafs', b'\xff\xd9\xd2\x04d\xea\x91\x91\xf6\xd7']
 ```
@@ -48,7 +48,7 @@ proofs = build_proofs_base64(activations, decode_batching_size=3, topk=4, skip_p
 print(f"Activation shapes: {[i.shape for i in activations]}")
 print(f"Proofs: {proofs}")
 ```
-```python
+```bash
 Activation shapes: [torch.Size([1, 5, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16]), torch.Size([1, 16])]
 Proofs: ['/9kbQitnukt1bQ==', '/9nLuJrxhiVUoA==', '/9m0aNrm5KtBtg==', '/9mAZNZYMOKvcw==', '/9nSBGTqkZH21w==']
 ```
@@ -69,7 +69,7 @@ results = verify_proofs_base64(activations, proofs, decode_batching_size=3, topk
 print("Results:")
 print(*results, sep="\n")
 ```
-```python
+```bash
 Results:
 VerificationResult(exp_intersections=4, mant_err_mean=1.75, mant_err_median=2.0)
 VerificationResult(exp_intersections=4, mant_err_mean=2, mant_err_median=2.0)

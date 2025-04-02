@@ -1,10 +1,8 @@
-from typing import Union
-import base64
+import time
 from toploc.C.csrc.ndd import (
-    compute_newton_coefficients,
-    evaluate_polynomial,
     evaluate_polynomials,
 )
+from toploc.C.csrc.poly import ProofPoly
 from toploc.C.csrc.utils import get_fp_parts
 import torch
 import logging
@@ -19,67 +17,6 @@ def find_injective_modulus(x: list[int]) -> int:
         if len(set([j % i for j in x])) == len(x):
             return i
     raise ValueError("No injective modulus found!")  # pragma: no cover
-
-
-class ProofPoly:
-    def __init__(self, coeffs: list[int], modulus: int):
-        self.coeffs = coeffs
-        self.modulus = modulus
-
-    def __call__(self, x: int):
-        return evaluate_polynomial(self.coeffs, x % self.modulus)
-
-    def __len__(self):
-        return len(self.coeffs)
-
-    @classmethod
-    def null(cls, length: int) -> "ProofPoly":
-        return cls([0] * length, 0)
-
-    @classmethod
-    def from_points(
-        cls, x: Union[list[int], torch.Tensor], y: Union[list[int], torch.Tensor]
-    ) -> "ProofPoly":
-        if isinstance(x, torch.Tensor):
-            x = x.tolist()
-        if isinstance(y, torch.Tensor):
-            if y.dtype == torch.bfloat16:
-                y = y.view(dtype=torch.uint16).tolist()
-            elif y.dtype == torch.float32:
-                raise NotImplementedError(
-                    "float32 not supported yet because interpolate has hardcode prime"
-                )
-            else:
-                y = y.tolist()
-        modulus = find_injective_modulus(x)
-        x = [i % modulus for i in x]
-        return cls(compute_newton_coefficients(x, y), modulus)
-
-    def to_base64(self):
-        base64_encoded = base64.b64encode(self.to_bytes()).decode("utf-8")
-        return base64_encoded
-
-    def to_bytes(self):
-        return self.modulus.to_bytes(2, byteorder="big", signed=False) + b"".join(
-            coeff.to_bytes(2, byteorder="big", signed=False) for coeff in self.coeffs
-        )
-
-    @classmethod
-    def from_bytes(cls, byte_data: bytes) -> "ProofPoly":
-        modulus = int.from_bytes(byte_data[:2], byteorder="big", signed=False)
-        coeffs = [
-            int.from_bytes(byte_data[i : i + 2], byteorder="big", signed=False)
-            for i in range(2, len(byte_data), 2)
-        ]
-        return cls(coeffs, modulus)
-
-    @classmethod
-    def from_base64(cls, base64_encoded: str) -> "ProofPoly":
-        byte_data = base64.b64decode(base64_encoded)
-        return cls.from_bytes(byte_data)
-
-    def __repr__(self) -> str:
-        return f"ProofPoly[{self.modulus}]({self.coeffs})"
 
 
 def build_proofs(
@@ -97,7 +34,7 @@ def build_proofs(
             flat_view = activations[0].view(-1)
             topk_indices = flat_view.abs().topk(topk).indices
             topk_values = flat_view[topk_indices]
-            proof = ProofPoly.from_points(topk_indices, topk_values)
+            proof = ProofPoly.from_points_tensor(topk_indices, topk_values)
             proofs.append(proof)
 
         # Batched Decode
@@ -109,7 +46,7 @@ def build_proofs(
             )
             topk_indices = flat_view.abs().topk(topk).indices
             topk_values = flat_view[topk_indices]
-            proof = ProofPoly.from_points(topk_indices, topk_values)
+            proof = ProofPoly.from_points_tensor(topk_indices, topk_values)
             proofs.append(proof)
     except Exception as e:
         logger.error(f"Error building proofs: {e}")
@@ -184,6 +121,8 @@ def verify_proofs(
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
     results = []
+    start_time = time.time()
+    acc_time = 0
     for proof, chunk in zip(
         proofs,
         batch_activations(
@@ -193,7 +132,9 @@ def verify_proofs(
         ),
     ):
         chunk = chunk.view(-1).cpu()
+        start_time_exp = time.time()
         topk_indices = chunk.abs().topk(k=topk).indices.tolist()
+        acc_time += time.time() - start_time_exp
         topk_values = chunk[topk_indices]
         y_values = evaluate_polynomials(proof.coeffs, topk_indices)
         proof_topk_values = torch.tensor(y_values, dtype=torch.uint16).view(
@@ -215,6 +156,7 @@ def verify_proofs(
             )
         else:
             results.append(VerificationResult(sum(exp_mismatches), 2**64, 2**64))
+    print(f"Time taken: {time.time() - start_time} acc_time: {acc_time}")
     return results
 
 

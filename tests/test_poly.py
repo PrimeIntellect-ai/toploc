@@ -5,11 +5,11 @@ from toploc.poly import (
     find_injective_modulus,
     build_proofs_bytes,
     build_proofs_base64,
-    ProofPoly,
     VerificationResult,
     verify_proofs_bytes,
     verify_proofs_base64,
 )
+from toploc.C.csrc.poly import ProofPoly
 
 
 def test_find_injective_modulus():
@@ -68,7 +68,7 @@ def test_proof_poly_from_points_tensor():
     """Test creation from tensor points"""
     x = torch.tensor([1, 2, 3])
     y = torch.tensor([4, 5, 6])
-    poly = ProofPoly.from_points(x, y)
+    poly = ProofPoly.from_points_tensor(x, y)
     assert isinstance(poly, ProofPoly)
     assert len(poly.coeffs) == 3
     assert poly(1) == 4
@@ -80,7 +80,7 @@ def test_proof_poly_from_points_bfloat16():
     """Test creation from bfloat16 tensor"""
     x = torch.tensor([1, 2, 3])
     y = torch.tensor([4, 5, 6], dtype=torch.bfloat16)
-    poly = ProofPoly.from_points(x, y)
+    poly = ProofPoly.from_points_tensor(x, y)
     assert isinstance(poly, ProofPoly)
     assert len(poly.coeffs) == 3
 

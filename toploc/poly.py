@@ -1,4 +1,3 @@
-import time
 from toploc.C.csrc.ndd import (
     evaluate_polynomials,
 )
@@ -121,8 +120,6 @@ def verify_proofs(
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
     results = []
-    start_time = time.time()
-    acc_time = 0
     for proof, chunk in zip(
         proofs,
         batch_activations(
@@ -132,9 +129,7 @@ def verify_proofs(
         ),
     ):
         chunk = chunk.view(-1).cpu()
-        start_time_exp = time.time()
         topk_indices = chunk.abs().topk(k=topk).indices.tolist()
-        acc_time += time.time() - start_time_exp
         topk_values = chunk[topk_indices]
         y_values = evaluate_polynomials(proof.coeffs, topk_indices)
         proof_topk_values = torch.tensor(y_values, dtype=torch.uint16).view(
@@ -156,7 +151,6 @@ def verify_proofs(
             )
         else:
             results.append(VerificationResult(sum(exp_mismatches), 2**64, 2**64))
-    print(f"Time taken: {time.time() - start_time} acc_time: {acc_time}")
     return results
 
 

@@ -32,6 +32,12 @@ extensions = [
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
     ),
+    CppExtension(
+        name="toploc.C.csrc.poly",
+        sources=[os.path.join(CSRC_DIR, "poly.cpp")],
+        extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
+    ),
 ]
 
 setup(

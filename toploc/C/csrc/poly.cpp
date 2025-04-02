@@ -264,7 +264,7 @@ struct VerificationResult {
     double mant_err_median;
 };
 
-std::vector<VerificationResult> verify_proofs_cpp(
+std::vector<VerificationResult> verify_proofs(
     const torch::Tensor& activations,
     const std::vector<ProofPoly>& proofs,
     int decode_batching_size,
@@ -272,6 +272,7 @@ std::vector<VerificationResult> verify_proofs_cpp(
 ) {
     std::vector<VerificationResult> results;
     
+    // TODO: Do batches in parallel
     // Process activations in batches
     for (size_t proof_idx = 0; proof_idx < proofs.size(); proof_idx++) {
         // Get corresponding activation batch
@@ -347,6 +348,33 @@ std::vector<VerificationResult> verify_proofs_cpp(
     return results;
 }
 
+std::vector<VerificationResult> verify_proofs_bytes(
+    const torch::Tensor& activations,
+    const std::vector<std::string>& proofs,
+    int decode_batching_size,
+    int topk
+) {
+    std::vector<ProofPoly> proofs_poly;
+    for (const auto& proof : proofs) {
+        proofs_poly.push_back(ProofPoly::from_bytes(proof));
+    }
+    return verify_proofs(activations, proofs_poly, decode_batching_size, topk);
+}
+
+std::vector<VerificationResult> verify_proofs_base64(
+    const torch::Tensor& activations,
+    const std::vector<std::string>& proofs,
+    int decode_batching_size,
+    int topk
+) {
+    std::vector<ProofPoly> proofs_poly;
+    for (const auto& proof : proofs) {
+        proofs_poly.push_back(ProofPoly::from_base64(proof));
+    }
+    return verify_proofs(activations, proofs_poly, decode_batching_size, topk);
+}
+
+
 
 PYBIND11_MODULE(poly, m) {
     py::class_<ProofPoly>(m, "ProofPoly")
@@ -369,7 +397,21 @@ PYBIND11_MODULE(poly, m) {
         .def_readwrite("mant_err_mean", &VerificationResult::mant_err_mean)
         .def_readwrite("mant_err_median", &VerificationResult::mant_err_median);
         
-    m.def("verify_proofs", &verify_proofs_cpp, 
+    m.def("verify_proofs", &verify_proofs, 
+          py::arg("activations"), 
+          py::arg("proofs"),
+          py::arg("decode_batching_size"),
+          py::arg("topk")
+    );
+
+    m.def("verify_proofs_bytes", &verify_proofs_bytes, 
+          py::arg("activations"), 
+          py::arg("proofs"),
+          py::arg("decode_batching_size"),
+          py::arg("topk")
+    );
+
+    m.def("verify_proofs_base64", &verify_proofs_base64, 
           py::arg("activations"), 
           py::arg("proofs"),
           py::arg("decode_batching_size"),

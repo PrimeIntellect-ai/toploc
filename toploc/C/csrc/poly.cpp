@@ -234,6 +234,21 @@ public:
                 reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>()),
                 reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>() + y.numel())
             );
+        } else if (y.dtype() == torch::kInt32) {
+            y_vec = std::vector<int>(
+                y.const_data_ptr<int32_t>(),
+                y.const_data_ptr<int32_t>() + y.numel()
+            );
+        } else if (y.dtype() == torch::kUInt32) {
+            y_vec = std::vector<int>(
+                y.const_data_ptr<uint32_t>(),
+                y.const_data_ptr<uint32_t>() + y.numel()
+            );
+        } else if (y.dtype() == torch::kLong) {
+            y_vec = std::vector<int>(
+                y.const_data_ptr<int64_t>(),
+                y.const_data_ptr<int64_t>() + y.numel()
+            );
         } else if (y.dtype() == torch::kFloat32) {
             throw std::invalid_argument("float32 not supported yet because interpolate has hardcode prime");
         } else {

@@ -209,6 +209,7 @@ public:
         if (x.dtype() != torch::kInt32 && x.dtype() != torch::kLong) {
             throw std::invalid_argument("x must be an int32 or long tensor");
         }
+
         // TODO: Make this work with int64_t x
         std::vector<int> x_vec;
         if (x.dtype() == torch::kLong) {
@@ -218,10 +219,7 @@ public:
         } else {
             throw std::invalid_argument("x must be of dtype [int32, uint32, long]");
         } 
-        std::cout << "x.dtype(): " << x.dtype() << std::endl;
-        std::cout << "y.dtype(): " << y.dtype() << std::endl;
-        std::cout << (x.dtype() == torch::kLong) << (x.dtype() == torch::kInt32) << std::endl;
-        std::cout << (y.dtype() == torch::kLong) << (y.dtype() == torch::kInt32) << (y.dtype() == torch::kFloat32) << (y.dtype() == torch::kFloat16) << (y.dtype() == torch::kBFloat16) << std::endl;
+        
         // We dont support float32 yet
         std::vector<int> y_vec;
         if (y.dtype() == torch::kBFloat16) {
@@ -254,18 +252,6 @@ public:
         } else {
             throw std::invalid_argument("y must be of dtype [float16, bfloat16, float32]");
         }
-
-        std::cout << "x_vec: ";
-        for (int i = 0; i < x_vec.size(); i++) {
-            std::cout << x_vec[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "y_vec: ";
-        for (int i = 0; i < y_vec.size(); i++) {
-            std::cout << y_vec[i] << " ";
-        }
-        std::cout << std::endl;
-        
 
         return from_points(x_vec, y_vec);
     }

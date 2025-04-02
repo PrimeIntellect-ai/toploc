@@ -138,7 +138,7 @@ int evaluate_polynomial(const std::vector<int>& coefficients, int x)
 std::vector<int> evaluate_polynomials(const std::vector<int>& coefficients, const std::vector<int>& x)
 {
     std::vector<int> results(x.size());
-    for (int i = 0; i < x.size(); i++) {
+    for (size_t i = 0; i < x.size(); i++) {
         results[i] = evaluate_polynomial(coefficients, x[i]);
     }
     return results;

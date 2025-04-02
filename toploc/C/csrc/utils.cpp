@@ -63,6 +63,29 @@ std::tuple<std::vector<int32_t>, std::vector<int32_t>> get_fp_parts(
     return std::make_tuple(std::move(prefill_exps), std::move(prefill_mants));
 }
 
+std::tuple<std::vector<int32_t>, std::vector<int32_t>> get_fp_parts_vec(
+    const std::vector<uint16_t>& tensor,
+    int num_threads = max_num_threads
+) {
+    // Extract tensor properties
+    size_t num_elements = tensor.size();
+    
+    // Initialize vectors to store exponent and mantissa bits
+    std::vector<int32_t> prefill_exps(num_elements);
+    std::vector<int32_t> prefill_mants(num_elements);
+    
+    omp_set_num_threads(num_threads);
+    
+    #pragma omp parallel for
+    for (size_t i = 0; i < num_elements; ++i) {
+        uint16_t bits = tensor[i];
+        prefill_exps[i] = (bits & BF16_EXP_MASK) >> BF16_EXP_SHIFT;
+        prefill_mants[i] = bits & BF16_MANT_MASK;
+    }
+    
+    return std::make_tuple(std::move(prefill_exps), std::move(prefill_mants));
+}
+
 // Python module definition using pybind11
 PYBIND11_MODULE(utils, m) {
     m.def(

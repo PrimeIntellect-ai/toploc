@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include "./ndd.cpp"
+#include "./utils.cpp"
 
 // Namespace alias for pybind11
 namespace py = pybind11;
@@ -257,6 +258,96 @@ public:
     }
 };
 
+struct VerificationResult {
+    int exp_mismatches;
+    double mant_err_mean;
+    double mant_err_median;
+};
+
+std::vector<VerificationResult> verify_proofs_cpp(
+    const torch::Tensor& activations,
+    const std::vector<ProofPoly>& proofs,
+    int decode_batching_size,
+    int topk
+) {
+    std::vector<VerificationResult> results;
+    
+    // Process activations in batches
+    for (size_t proof_idx = 0; proof_idx < proofs.size(); proof_idx++) {
+        // Get corresponding activation batch
+        int batch_start = proof_idx * decode_batching_size;
+        int batch_end = std::min(batch_start + decode_batching_size, (int)activations.numel());
+        //std::cout << "activations: " << activations.sizes() << std::endl;
+        //std::cout << "batch_start: " << batch_start << std::endl;
+        //std::cout << "batch_end: " << batch_end << std::endl;
+        torch::Tensor chunk = activations.slice(0, batch_start, batch_end);
+        
+        //std::cout << "chunk: " << chunk.sizes() << std::endl;
+        chunk = chunk.view({-1});
+        //std::cout << "chunk: " << chunk.sizes() << std::endl;
+        // Get top-k indices and values
+        auto topk_result = chunk.abs().topk(topk);
+        torch::Tensor topk_indices = std::get<1>(topk_result);
+        torch::Tensor topk_values = chunk.index_select(0, topk_indices);
+
+        //std::cout << "topk_indices: " << topk_indices.sizes() << std::endl;
+        //std::cout << "topk_values: " << topk_values.sizes() << std::endl;
+
+        // Evaluate polynomial at topk indices
+        std::vector<int> indices_vec(
+            topk_indices.const_data_ptr<int64_t>(), 
+            topk_indices.const_data_ptr<int64_t>() + topk_indices.numel()
+        );
+
+        //std::cout << "indices_vec: " << indices_vec.size() << std::endl;
+        //std::cout << "proofs[proof_idx].coeffs: " << proofs[proof_idx].coeffs.size() << std::endl;
+        std::vector<int> y_values = evaluate_polynomials(proofs[proof_idx].coeffs, indices_vec);
+        
+        // Convert to tensors for comparison
+        std::vector<uint16_t> proof_values(y_values.begin(), y_values.end());
+
+        // Get exponents and mantissas
+        auto [exps, mants] = get_fp_parts_vec(proof_values);
+        auto [proof_exps, proof_mants] = get_fp_parts(topk_values);
+
+        //std::cout << "exps: " << exps.size() << std::endl;
+        //std::cout << "proof_exps: " << proof_exps.size() << std::endl;
+        //std::cout << "mants: " << mants.size() << std::endl;
+        //std::cout << "proof_mants: " << proof_mants.size() << std::endl;
+
+        // Calculate mismatches and errors
+        std::vector<bool> exp_mismatches;
+        std::vector<float> mant_errs;
+        
+        for (int i = 0; i < topk; i++) {
+            bool exp_mismatch = exps[i] != proof_exps[i];
+            exp_mismatches.push_back(exp_mismatch);
+            if (!exp_mismatch) {
+                mant_errs.push_back(std::abs(mants[i] - proof_mants[i]));
+            }
+        }
+
+        // Calculate statistics
+        int exp_mismatch_count = std::count(exp_mismatches.begin(), exp_mismatches.end(), true);
+        double mean = 0.0;
+        double median = 0.0;
+        
+        if (!mant_errs.empty()) {
+            mean = std::accumulate(mant_errs.begin(), mant_errs.end(), 0.0) / mant_errs.size();
+            std::sort(mant_errs.begin(), mant_errs.end());
+            median = mant_errs[mant_errs.size() / 2];
+        } else {
+            mean = std::pow(2, 64);
+            median = std::pow(2, 64);
+        }
+
+        results.push_back({exp_mismatch_count, mean, median});
+    }
+
+    return results;
+}
+
+
 PYBIND11_MODULE(poly, m) {
     py::class_<ProofPoly>(m, "ProofPoly")
         .def(py::init<const std::vector<int>&, int>())
@@ -272,4 +363,16 @@ PYBIND11_MODULE(poly, m) {
         .def("__repr__", &ProofPoly::repr)
         .def_readwrite("coeffs", &ProofPoly::coeffs)
         .def_readwrite("modulus", &ProofPoly::modulus);
+
+    py::class_<VerificationResult>(m, "VerificationResult")
+        .def_readwrite("exp_mismatches", &VerificationResult::exp_mismatches)
+        .def_readwrite("mant_err_mean", &VerificationResult::mant_err_mean)
+        .def_readwrite("mant_err_median", &VerificationResult::mant_err_median);
+        
+    m.def("verify_proofs", &verify_proofs_cpp, 
+          py::arg("activations"), 
+          py::arg("proofs"),
+          py::arg("decode_batching_size"),
+          py::arg("topk")
+    );
 }

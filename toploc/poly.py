@@ -1,6 +1,10 @@
 from typing import Union
 import base64
-from toploc.C.csrc.ndd import compute_newton_coefficients, evaluate_polynomial
+from toploc.C.csrc.ndd import (
+    compute_newton_coefficients,
+    evaluate_polynomial,
+    evaluate_polynomials,
+)
 from toploc.C.csrc.utils import get_fp_parts
 import torch
 import logging
@@ -191,9 +195,11 @@ def verify_proofs(
         chunk = chunk.view(-1).cpu()
         topk_indices = chunk.abs().topk(k=topk).indices.tolist()
         topk_values = chunk[topk_indices]
-        proof_topk_values = torch.tensor(
-            [proof(i) for i in topk_indices], dtype=torch.uint16
-        ).view(dtype=torch.bfloat16)
+        y_values = evaluate_polynomials(proof.coeffs, topk_indices)
+        proof_topk_values = torch.tensor(y_values, dtype=torch.uint16).view(
+            dtype=torch.bfloat16
+        )
+
         exps, mants = get_fp_parts(proof_topk_values)
         proof_exps, proof_mants = get_fp_parts(topk_values)
 

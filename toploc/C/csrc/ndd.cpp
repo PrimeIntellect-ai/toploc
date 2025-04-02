@@ -131,6 +131,19 @@ int evaluate_polynomial(const std::vector<int>& coefficients, int x)
     return safeMod(result);
 }
 
+/**
+ * Evaluate a polynomial at multiple points using Horner's method.
+ * Coefficients are in ascending order c[0] + c[1]*x + ...
+ */
+std::vector<int> evaluate_polynomials(const std::vector<int>& coefficients, const std::vector<int>& x)
+{
+    std::vector<int> results(x.size());
+    for (int i = 0; i < x.size(); i++) {
+        results[i] = evaluate_polynomial(coefficients, x[i]);
+    }
+    return results;
+}
+
 PYBIND11_MODULE(ndd, m) {
     m.doc() = "Newton's divided difference interpolation for polynomial congruences";
 
@@ -145,4 +158,10 @@ PYBIND11_MODULE(ndd, m) {
           "Evaluate the polynomial at point x using Horner's method",
           py::arg("coefficients"),
           py::arg("x"));
+
+    m.def("evaluate_polynomials",
+          &evaluate_polynomials,
+          "Evaluate the polynomial at points x using Horner's method",
+          py::arg("coefficients"),
+          py::arg("x"));    
 }

@@ -8,6 +8,90 @@
 // Namespace alias for pybind11
 namespace py = pybind11;
 
+// Add base64 encoding/decoding functions
+static const std::string base64_chars = 
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+static std::string base64_encode(const std::string& input) {
+    std::string ret;
+    int i = 0;
+    int j = 0;
+    unsigned char char_array_3[3];
+    unsigned char char_array_4[4];
+    const unsigned char* bytes_to_encode = reinterpret_cast<const unsigned char*>(input.c_str());
+    size_t in_len = input.length();
+
+    while (in_len--) {
+        char_array_3[i++] = *(bytes_to_encode++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for(i = 0; i < 4; i++)
+                ret += base64_chars[char_array_4[i]];
+            i = 0;
+        }
+    }
+
+    if (i) {
+        for(j = i; j < 3; j++)
+            char_array_3[j] = '\0';
+
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+
+        for (j = 0; j < i + 1; j++)
+            ret += base64_chars[char_array_4[j]];
+
+        while((i++ < 3))
+            ret += '=';
+    }
+    return ret;
+}
+
+static std::string base64_decode(const std::string& encoded_string) {
+    size_t in_len = encoded_string.size();
+    int i = 0;
+    int j = 0;
+    int in_ = 0;
+    unsigned char char_array_4[4], char_array_3[3];
+    std::string ret;
+
+    while (in_len-- && (encoded_string[in_] != '=')) {
+        char_array_4[i++] = encoded_string[in_]; in_++;
+        if (i == 4) {
+            for (i = 0; i < 4; i++)
+                char_array_4[i] = base64_chars.find(char_array_4[i]);
+
+            char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+            for (i = 0; i < 3; i++)
+                ret += char_array_3[i];
+            i = 0;
+        }
+    }
+
+    if (i) {
+        for (j = 0; j < i; j++)
+            char_array_4[j] = base64_chars.find(char_array_4[j]);
+
+        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+
+        for (j = 0; j < i - 1; j++)
+            ret += char_array_3[j];
+    }
+
+    return ret;
+}
+
 class ProofPoly {
 public:
     std::vector<int> coeffs;
@@ -65,6 +149,111 @@ public:
         oss << "])";
         return oss.str();
     }
+
+    static ProofPoly null(size_t length) {
+        return ProofPoly(std::vector<int>(length, 0), 0);
+    }
+
+    std::string to_base64() const {
+        return base64_encode(to_bytes());
+    }
+
+    static ProofPoly from_base64(const std::string& base64_str) {
+        return from_bytes(base64_decode(base64_str));
+    }
+
+    // TODO: Make this work with int64_t x
+    static ProofPoly from_points(const std::vector<int>& x, const std::vector<int>& y) {
+        if (x.size() != y.size()) {
+            throw std::invalid_argument("x and y must have the same length");
+        }
+        
+        // Find injective modulus
+        int modulus = 0;
+        for (int i = 65497; i > 0; i--) {
+            std::vector<int> modded;
+            bool is_injective = true;
+            for (int val : x) {
+                int mod_val = val % i;
+                if (std::find(modded.begin(), modded.end(), mod_val) != modded.end()) {
+                    is_injective = false;
+                    break;
+                }
+                modded.push_back(mod_val);
+            }
+            if (is_injective) {
+                modulus = i;
+                break;
+            }
+        }
+        
+        if (modulus == 0) {
+            throw std::runtime_error("No injective modulus found!");
+        }
+
+        // Apply modulus to x values
+        std::vector<int> x_mod;
+        for (int val : x) {
+            x_mod.push_back(val % modulus);
+        }
+
+        // Compute Newton coefficients
+        std::vector<int> coeffs = compute_newton_coefficients(x_mod, y);
+        return ProofPoly(coeffs, modulus);
+    }
+
+    static ProofPoly from_points_tensor(const torch::Tensor& x, const torch::Tensor& y) {
+        if (x.dim() != 1 || y.dim() != 1) {
+            throw std::invalid_argument("x and y must be 1D tensors");
+        }
+        if (x.dtype() != torch::kInt32 && x.dtype() != torch::kLong) {
+            throw std::invalid_argument("x must be an int32 or long tensor");
+        }
+        // TODO: Make this work with int64_t x
+        std::vector<int> x_vec;
+        if (x.dtype() == torch::kLong) {
+            x_vec = std::vector<int>(x.const_data_ptr<int64_t>(), x.const_data_ptr<int64_t>() + x.numel());
+        } else if (x.dtype() == torch::kInt32 || x.dtype() == torch::kUInt32) {
+            x_vec = std::vector<int>(x.const_data_ptr<int>(), x.const_data_ptr<int>() + x.numel());
+        } else {
+            throw std::invalid_argument("x must be of dtype [int32, uint32, long]");
+        } 
+        std::cout << "x.dtype(): " << x.dtype() << std::endl;
+        std::cout << "y.dtype(): " << y.dtype() << std::endl;
+        std::cout << (x.dtype() == torch::kLong) << (x.dtype() == torch::kInt32) << std::endl;
+        std::cout << (y.dtype() == torch::kLong) << (y.dtype() == torch::kInt32) << (y.dtype() == torch::kFloat32) << (y.dtype() == torch::kFloat16) << (y.dtype() == torch::kBFloat16) << std::endl;
+        // We dont support float32 yet
+        std::vector<int> y_vec;
+        if (y.dtype() == torch::kBFloat16) {
+            y_vec = std::vector<int>(
+                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::BFloat16>()),
+                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::BFloat16>() + y.numel())
+            );
+        } else if (y.dtype() == torch::kFloat16) {
+            y_vec = std::vector<int>(
+                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>()),
+                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>() + y.numel())
+            );
+        } else if (y.dtype() == torch::kFloat32) {
+            throw std::invalid_argument("float32 not supported yet because interpolate has hardcode prime");
+        } else {
+            throw std::invalid_argument("y must be of dtype [float16, bfloat16, float32]");
+        }
+
+        std::cout << "x_vec: ";
+        for (int i = 0; i < x_vec.size(); i++) {
+            std::cout << x_vec[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "y_vec: ";
+        for (int i = 0; i < y_vec.size(); i++) {
+            std::cout << y_vec[i] << " ";
+        }
+        std::cout << std::endl;
+        
+
+        return from_points(x_vec, y_vec);
+    }
 };
 
 PYBIND11_MODULE(poly, m) {
@@ -72,7 +261,14 @@ PYBIND11_MODULE(poly, m) {
         .def(py::init<const std::vector<int>&, int>())
         .def("__call__", &ProofPoly::call)
         .def("__len__", &ProofPoly::length)
+        .def_static("from_points", &ProofPoly::from_points)
+        .def_static("from_points_tensor", &ProofPoly::from_points_tensor)
+        .def_static("null", &ProofPoly::null)
         .def("to_bytes", &ProofPoly::to_bytes)
+        .def("to_base64", &ProofPoly::to_base64)
         .def_static("from_bytes", &ProofPoly::from_bytes)
-        .def("__repr__", &ProofPoly::repr);
+        .def_static("from_base64", &ProofPoly::from_base64)
+        .def("__repr__", &ProofPoly::repr)
+        .def_readwrite("coeffs", &ProofPoly::coeffs)
+        .def_readwrite("modulus", &ProofPoly::modulus);
 }

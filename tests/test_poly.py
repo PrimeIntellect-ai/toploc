@@ -327,3 +327,12 @@ def test_pickleable_VerificationResult():
     result_unpickled = pickle.loads(result_pickled)
     assert result_unpickled == result
     assert result_unpickled != VerificationResult(2, 2, 3)
+
+
+def test_pickleable_ProofPoly():
+    poly = ProofPoly([1, 2, 3], 4)
+    poly_pickled = pickle.dumps(poly)
+    poly_unpickled = pickle.loads(poly_pickled)
+    assert poly_unpickled == poly
+    assert poly_unpickled != ProofPoly([1, 2, 3], 5)
+    assert poly_unpickled != ProofPoly([1, 2, 4], 4)

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <pybind11/stl.h>
+#include <pybind11/operators.h>
 #include "./ndd.cpp"
 #include "./utils.cpp"
 
@@ -108,6 +109,22 @@ public:
 
     size_t length() const {
         return coeffs.size();
+    }
+
+    bool operator==(const ProofPoly& other) const {
+        return coeffs == other.coeffs && modulus == other.modulus;
+    }
+
+    bool operator!=(const ProofPoly& other) const {
+        return !(*this == other);
+    }
+
+    py::tuple to_tuple() const {
+        return py::make_tuple(coeffs, modulus);
+    }
+
+    static ProofPoly from_tuple(const py::tuple& tuple) {
+        return ProofPoly(tuple[0].cast<std::vector<int>>(), tuple[1].cast<int>());
     }
 
     static ProofPoly from_bytes(const std::string& data) {
@@ -423,6 +440,12 @@ PYBIND11_MODULE(poly, m) {
         .def_static("from_bytes", &ProofPoly::from_bytes)
         .def_static("from_base64", &ProofPoly::from_base64)
         .def("__repr__", &ProofPoly::repr)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::pickle(
+            [](const ProofPoly &p) { return p.to_tuple(); },
+            [](const py::tuple &t) { return ProofPoly::from_tuple(t); }
+        ))
         .def_readwrite("coeffs", &ProofPoly::coeffs)
         .def_readwrite("modulus", &ProofPoly::modulus);
 

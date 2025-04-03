@@ -258,6 +258,9 @@ public:
     }
 };
 
+// NOTE (Jack): Attributes should always be a measure of error, increasing the further we are from the proof
+// This way, acceptance is always below the threshold and rejection is always above
+// e.g. exp_match is bad, exp_mismatch is good
 class VerificationResult {
 public:
     int exp_mismatches;

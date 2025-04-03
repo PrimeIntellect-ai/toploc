@@ -1,11 +1,16 @@
 from toploc.C.csrc.ndd import (
     evaluate_polynomials,
 )
-from toploc.C.csrc.poly import ProofPoly
+from toploc.C.csrc.poly import (
+    ProofPoly,
+    verify_proofs_base64 as c_verify_proofs_base64,
+    verify_proofs_bytes as c_verify_proofs_bytes,
+    verify_proofs as c_verify_proofs,
+    VerificationResult,
+)
 from toploc.C.csrc.utils import get_fp_parts
 import torch
 import logging
-from dataclasses import dataclass
 from statistics import mean, median
 
 logger = logging.getLogger(__name__)
@@ -105,11 +110,6 @@ def batch_activations(
 # NOTE (Jack): Attributes should always be a measure of error, increasing the further we are from the proof
 # This way, acceptance is always below the threshold and rejection is always above
 # e.g. exp_match is bad, exp_mismatch is good
-@dataclass
-class VerificationResult:
-    exp_mismatches: int
-    mant_err_mean: float
-    mant_err_median: float
 
 
 def verify_proofs(
@@ -119,6 +119,8 @@ def verify_proofs(
     topk: int,
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
+    if isinstance(activations, torch.Tensor) and skip_prefill:
+        return c_verify_proofs(activations, proofs, decode_batching_size, topk)
     results = []
     for proof, chunk in zip(
         proofs,
@@ -161,6 +163,9 @@ def verify_proofs_bytes(
     topk: int,
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
+    if isinstance(activations, torch.Tensor) and skip_prefill:
+        print(type(activations), type(proofs), type(decode_batching_size), type(topk))
+        return c_verify_proofs_bytes(activations, proofs, decode_batching_size, topk)
     return verify_proofs(
         activations,
         [ProofPoly.from_bytes(proof) for proof in proofs],
@@ -177,6 +182,8 @@ def verify_proofs_base64(
     topk: int,
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
+    if isinstance(activations, torch.Tensor) and skip_prefill:
+        return c_verify_proofs_base64(activations, proofs, decode_batching_size, topk)
     return verify_proofs(
         activations,
         [ProofPoly.from_base64(proof) for proof in proofs],

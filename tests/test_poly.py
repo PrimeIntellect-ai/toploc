@@ -5,11 +5,10 @@ from toploc.poly import (
     find_injective_modulus,
     build_proofs_bytes,
     build_proofs_base64,
-    VerificationResult,
     verify_proofs_bytes,
     verify_proofs_base64,
 )
-from toploc.C.csrc.poly import ProofPoly
+from toploc.C.csrc.poly import ProofPoly, VerificationResult
 
 
 def test_find_injective_modulus():
@@ -315,6 +314,7 @@ def test_verify_proofs_bytes_skip_prefill(sample_activations):
     assert isinstance(results, list)
     assert all(isinstance(r, VerificationResult) for r in results)
     assert len(results) == len(proofs_bytes)
+    print(results)
     assert all(r.exp_mismatches == 0 for r in results)
     assert all(r.mant_err_mean == 0 for r in results)
     assert all(r.mant_err_median == 0 for r in results)

@@ -50,6 +50,8 @@ def build_proofs(
             )
             topk_indices = flat_view.abs().topk(topk).indices
             topk_values = flat_view[topk_indices]
+            topk_indices = topk_indices.to("cpu")
+            topk_values = topk_values.to("cpu")
             proof = ProofPoly.from_points_tensor(topk_indices, topk_values)
             proofs.append(proof)
     except Exception as e:

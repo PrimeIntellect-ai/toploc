@@ -298,8 +298,8 @@ def test_verify_proofs_base64_no_intersection_invalid(sample_activations):
     assert all(r.mant_err_median > 2**32 for r in results)
 
 
-def test_verify_proofs_bytes_skip_prefill(sample_activations):
-    """Test verification of invalid bytes proofs with skip_prefill"""
+def test_verify_proofs_bytes_skip_prefill():
+    """Test verification of valid bytes proofs with skip_prefill"""
     # Generate invalid proofs in bytes format
     activations = torch.randn(16, 16, dtype=torch.bfloat16)
     proofs_bytes = build_proofs_bytes(
@@ -316,6 +316,28 @@ def test_verify_proofs_bytes_skip_prefill(sample_activations):
     assert all(isinstance(r, VerificationResult) for r in results)
     assert len(results) == len(proofs_bytes)
     print(results)
+    assert all(r.exp_mismatches == 0 for r in results)
+    assert all(r.mant_err_mean == 0 for r in results)
+    assert all(r.mant_err_median == 0 for r in results)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+def test_verify_proofs_bytes_skip_prefill_gpu():
+    """Test verification of valid bytes proofs with skip_prefill on GPU"""
+    activations = torch.randn(16, 16, dtype=torch.bfloat16, device="cuda")
+    proofs_bytes = build_proofs_bytes(
+        activations, decode_batching_size=3, topk=4, skip_prefill=True
+    )
+
+    assert len(proofs_bytes) == 6
+
+    results = verify_proofs_bytes(
+        activations, proofs_bytes, decode_batching_size=3, topk=4, skip_prefill=True
+    )
+
+    assert isinstance(results, list)
+    assert all(isinstance(r, VerificationResult) for r in results)
+    assert len(results) == len(proofs_bytes)
     assert all(r.exp_mismatches == 0 for r in results)
     assert all(r.mant_err_mean == 0 for r in results)
     assert all(r.mant_err_median == 0 for r in results)

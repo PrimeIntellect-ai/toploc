@@ -159,7 +159,6 @@ def verify_proofs_bytes(
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
     if isinstance(activations, torch.Tensor) and skip_prefill:
-        print(type(activations), type(proofs), type(decode_batching_size), type(topk))
         return c_verify_proofs_bytes(activations, proofs, decode_batching_size, topk)
     return verify_proofs(
         activations,
@@ -178,7 +177,6 @@ def verify_proofs_base64(
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
     if isinstance(activations, torch.Tensor) and skip_prefill:
-        print(type(activations), type(proofs), type(decode_batching_size), type(topk))
         return c_verify_proofs_base64(activations, proofs, decode_batching_size, topk)
     return verify_proofs(
         activations,

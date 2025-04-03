@@ -107,11 +107,6 @@ def batch_activations(
     return batches
 
 
-# NOTE (Jack): Attributes should always be a measure of error, increasing the further we are from the proof
-# This way, acceptance is always below the threshold and rejection is always above
-# e.g. exp_match is bad, exp_mismatch is good
-
-
 def verify_proofs(
     activations: list[torch.Tensor],
     proofs: list[ProofPoly],
@@ -183,6 +178,7 @@ def verify_proofs_base64(
     skip_prefill: bool = False,
 ) -> list[VerificationResult]:
     if isinstance(activations, torch.Tensor) and skip_prefill:
+        print(type(activations), type(proofs), type(decode_batching_size), type(topk))
         return c_verify_proofs_base64(activations, proofs, decode_batching_size, topk)
     return verify_proofs(
         activations,

@@ -272,7 +272,9 @@ public:
 
     std::string repr() const {
         std::ostringstream oss;
-        oss << "VerificationResult[" << exp_mismatches << ", " << mant_err_mean << ", " << mant_err_median << "]";
+        oss << "VerificationResult[exp_mismatches=" << exp_mismatches 
+            << ", mant_err_mean=" << mant_err_mean 
+            << ", mant_err_median=" << mant_err_median << "]";
         return oss.str();
     }
 };

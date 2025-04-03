@@ -8,6 +8,12 @@
 #include "./ndd.cpp"
 #include "./utils.cpp"
 
+#ifdef DEBUG
+#define DEBUG_PRINT(x) std::cout << x << std::endl
+#else
+#define DEBUG_PRINT(x)
+#endif
+
 // Namespace alias for pybind11
 namespace py = pybind11;
 
@@ -329,21 +335,28 @@ std::vector<VerificationResult> verify_proofs(
         // Get corresponding activation batch
         int batch_start = proof_idx * decode_batching_size;
         int batch_end = std::min(batch_start + decode_batching_size, (int)activations.numel());
-        //std::cout << "activations: " << activations.sizes() << std::endl;
-        //std::cout << "batch_start: " << batch_start << std::endl;
-        //std::cout << "batch_end: " << batch_end << std::endl;
+        DEBUG_PRINT("activations: " << activations.sizes());
+        DEBUG_PRINT("batch_start: " << batch_start);
+        DEBUG_PRINT("batch_end: " << batch_end);
         torch::Tensor chunk = activations.slice(0, batch_start, batch_end);
         
-        //std::cout << "chunk: " << chunk.sizes() << std::endl;
+        DEBUG_PRINT("chunk: " << chunk.sizes());
         chunk = chunk.view({-1});
-        //std::cout << "chunk: " << chunk.sizes() << std::endl;
+        DEBUG_PRINT("chunk: " << chunk.sizes());
         // Get top-k indices and values
         auto topk_result = chunk.abs().topk(topk);
+        // Note: Up till here, the tensors could be on GPU
         torch::Tensor topk_indices = std::get<1>(topk_result);
-        torch::Tensor topk_values = chunk.index_select(0, topk_indices);
+        torch::Tensor topk_values = chunk.index_select(0, topk_indices).cpu();
+        topk_indices = topk_indices.cpu();
 
-        //std::cout << "topk_indices: " << topk_indices.sizes() << std::endl;
-        //std::cout << "topk_values: " << topk_values.sizes() << std::endl;
+        DEBUG_PRINT("topk_indices: " << topk_indices.sizes());
+        DEBUG_PRINT("topk_values: " << topk_values.sizes());
+
+        // Try going through the pointers
+        // for (int64_t i : *topk_indices.const_data_ptr<int64_t>()) {
+        //     std::cout << "topk_indices[" << i << "]: " << i << std::endl;
+        // }
 
         // Evaluate polynomial at topk indices
         std::vector<int> indices_vec(
@@ -351,8 +364,8 @@ std::vector<VerificationResult> verify_proofs(
             topk_indices.const_data_ptr<int64_t>() + topk_indices.numel()
         );
 
-        //std::cout << "indices_vec: " << indices_vec.size() << std::endl;
-        //std::cout << "proofs[proof_idx].coeffs: " << proofs[proof_idx].coeffs.size() << std::endl;
+        DEBUG_PRINT("indices_vec: " << indices_vec.size());
+        DEBUG_PRINT("proofs[proof_idx].coeffs: " << proofs[proof_idx].coeffs.size());
         std::vector<int> y_values = evaluate_polynomials(proofs[proof_idx].coeffs, indices_vec);
         
         // Convert to tensors for comparison
@@ -362,10 +375,10 @@ std::vector<VerificationResult> verify_proofs(
         auto [exps, mants] = get_fp_parts_vec(proof_values);
         auto [proof_exps, proof_mants] = get_fp_parts(topk_values);
 
-        //std::cout << "exps: " << exps.size() << std::endl;
-        //std::cout << "proof_exps: " << proof_exps.size() << std::endl;
-        //std::cout << "mants: " << mants.size() << std::endl;
-        //std::cout << "proof_mants: " << proof_mants.size() << std::endl;
+        DEBUG_PRINT("exps: " << exps.size());
+        DEBUG_PRINT("proof_exps: " << proof_exps.size());
+        DEBUG_PRINT("mants: " << mants.size());
+        DEBUG_PRINT("proof_mants: " << proof_mants.size());
 
         // Calculate mismatches and errors
         std::vector<bool> exp_mismatches;

@@ -7,6 +7,8 @@ CSRC_DIR = os.path.join("toploc", "C", "csrc")
 
 # Define mac-specific compiler and linker flags
 extra_compile_args = ["-O3"]
+if os.environ.get("DEBUG"):
+    extra_compile_args.append("-DDEBUG")
 extra_link_args: list[str] = []
 
 # Add macOS specific flags

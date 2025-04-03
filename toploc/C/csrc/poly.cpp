@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <pybind11/stl.h>
 #include "./ndd.cpp"
 #include "./utils.cpp"
 
@@ -277,6 +278,24 @@ public:
             << ", mant_err_median=" << mant_err_median << "]";
         return oss.str();
     }
+
+    bool operator==(const VerificationResult& other) const {
+        return exp_mismatches == other.exp_mismatches &&
+            mant_err_mean == other.mant_err_mean &&
+            mant_err_median == other.mant_err_median;
+    }
+
+    bool operator!=(const VerificationResult& other) const {
+        return !(*this == other);
+    }
+
+    py::tuple to_tuple() const {
+        return py::make_tuple(exp_mismatches, mant_err_mean, mant_err_median);
+    }
+
+    static VerificationResult from_tuple(const py::tuple& tuple) {
+        return VerificationResult(tuple[0].cast<int>(), tuple[1].cast<double>(), tuple[2].cast<double>());
+    }
 };
 
 std::vector<VerificationResult> verify_proofs(
@@ -409,10 +428,16 @@ PYBIND11_MODULE(poly, m) {
 
     py::class_<VerificationResult>(m, "VerificationResult")
         .def(py::init<int, double, double>())
+        .def(py::pickle(
+            [](const VerificationResult &v) { return v.to_tuple(); },
+            [](const py::tuple &t) { return VerificationResult::from_tuple(t); }
+        ))
         .def_readwrite("exp_mismatches", &VerificationResult::exp_mismatches)
         .def_readwrite("mant_err_mean", &VerificationResult::mant_err_mean)
         .def_readwrite("mant_err_median", &VerificationResult::mant_err_median)
-        .def("__repr__", &VerificationResult::repr);
+        .def("__repr__", &VerificationResult::repr)
+        .def(py::self == py::self)
+        .def(py::self != py::self);
         
     m.def("verify_proofs", &verify_proofs, 
           py::arg("activations"), 

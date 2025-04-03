@@ -59,3 +59,58 @@ class ProofPoly:
         ...
 
     def __repr__(self) -> str: ...
+
+class VerificationResult:
+    exp_mismatches: int
+    mant_err_mean: float
+    mant_err_median: float
+
+    def __init__(
+        self, exp_mismatches: int, mant_err_mean: float, mant_err_median: float
+    ) -> None: ...
+    def __repr__(self) -> str: ...
+
+def verify_proofs(
+    activations: torch.Tensor,
+    proofs: List[ProofPoly],
+    decode_batching_size: int,
+    topk: int,
+) -> List[VerificationResult]:
+    """
+    Verify proofs for a given set of activations.
+
+    Args:
+        activations: A 2D tensor of shape (sequence_length, hidden_size)
+        proofs: A list of ProofPoly objects
+        decode_batching_size: The number of activations to process in a single batch
+        topk: The number of top activations to consider for verification
+    """
+    ...
+
+def verify_proofs_bytes(
+    activations: torch.Tensor, proofs: List[str], decode_batching_size: int, topk: int
+) -> List[VerificationResult]:
+    """
+    Verify proofs for a given set of activations.
+
+    Args:
+        activations: A 2D tensor of shape (sequence_length, hidden_size)
+        proofs: A list of proof bytes
+        decode_batching_size: The number of activations to process in a single batch
+        topk: The number of top activations to consider for verification
+    """
+    ...
+
+def verify_proofs_base64(
+    activations: torch.Tensor, proofs: List[str], decode_batching_size: int, topk: int
+) -> List[VerificationResult]:
+    """
+    Verify proofs for a given set of activations.
+
+    Args:
+        activations: A 2D tensor of shape (sequence_length, hidden_size)
+        proofs: A list of proof strings in base64 format
+        decode_batching_size: The number of activations to process in a single batch
+        topk: The number of top activations to consider for verification
+    """
+    ...

@@ -258,10 +258,20 @@ public:
     }
 };
 
-struct VerificationResult {
+class VerificationResult {
+public:
     int exp_mismatches;
     double mant_err_mean;
     double mant_err_median;
+
+    VerificationResult(int exp_mismatches_, double mant_err_mean_, double mant_err_median_)
+        : exp_mismatches(exp_mismatches_), mant_err_mean(mant_err_mean_), mant_err_median(mant_err_median_) {}
+
+    std::string repr() const {
+        std::ostringstream oss;
+        oss << "VerificationResult[" << exp_mismatches << ", " << mant_err_mean << ", " << mant_err_median << "]";
+        return oss.str();
+    }
 };
 
 std::vector<VerificationResult> verify_proofs(
@@ -393,9 +403,11 @@ PYBIND11_MODULE(poly, m) {
         .def_readwrite("modulus", &ProofPoly::modulus);
 
     py::class_<VerificationResult>(m, "VerificationResult")
+        .def(py::init<int, double, double>())
         .def_readwrite("exp_mismatches", &VerificationResult::exp_mismatches)
         .def_readwrite("mant_err_mean", &VerificationResult::mant_err_mean)
-        .def_readwrite("mant_err_median", &VerificationResult::mant_err_median);
+        .def_readwrite("mant_err_median", &VerificationResult::mant_err_median)
+        .def("__repr__", &VerificationResult::repr);
         
     m.def("verify_proofs", &verify_proofs, 
           py::arg("activations"), 

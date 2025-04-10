@@ -353,16 +353,16 @@ std::vector<VerificationResult> verify_proofs(
         DEBUG_PRINT("topk_indices: " << topk_indices.sizes());
         DEBUG_PRINT("topk_values: " << topk_values.sizes());
 
-        // Try going through the pointers
-        // for (int64_t i : *topk_indices.const_data_ptr<int64_t>()) {
-        //     std::cout << "topk_indices[" << i << "]: " << i << std::endl;
-        // }
-
         // Evaluate polynomial at topk indices
         std::vector<int> indices_vec(
             topk_indices.const_data_ptr<int64_t>(), 
             topk_indices.const_data_ptr<int64_t>() + topk_indices.numel()
         );
+
+        // Modulus the indices
+        for (size_t idx = 0; idx < indices_vec.size(); idx++) {
+            indices_vec[idx] = indices_vec[idx] % proofs[proof_idx].modulus;
+        }
 
         DEBUG_PRINT("indices_vec: " << indices_vec.size());
         DEBUG_PRINT("proofs[proof_idx].coeffs: " << proofs[proof_idx].coeffs.size());

@@ -29,17 +29,19 @@ def build_proofs(
     topk: int,
     skip_prefill: bool = False,
 ) -> list[ProofPoly]:
+    topks = []
     proofs = []
 
     # In order to not crash, we return null proofs if there is an error
     try:
+        nonblocking = True
         # Prefill
         if not skip_prefill:
             flat_view = activations[0].view(-1)
-            topk_indices = flat_view.abs().topk(topk).indices
-            topk_values = flat_view[topk_indices]
-            proof = ProofPoly.from_points_tensor(topk_indices, topk_values)
-            proofs.append(proof)
+            top = flat_view.abs().topk(topk)
+            topk_indices = top.indices.to("cpu", non_blocking=nonblocking)
+            topk_values = top.values.to("cpu", non_blocking=nonblocking)
+            topks.append((topk_indices, topk_values))
 
         # Batched Decode
         for i in range(
@@ -48,12 +50,16 @@ def build_proofs(
             flat_view = torch.cat(
                 [i.view(-1) for i in activations[i : i + decode_batching_size]]
             )
-            topk_indices = flat_view.abs().topk(topk).indices
-            topk_values = flat_view[topk_indices]
-            topk_indices = topk_indices.to("cpu")
-            topk_values = topk_values.to("cpu")
-            proof = ProofPoly.from_points_tensor(topk_indices, topk_values)
-            proofs.append(proof)
+            top = flat_view.abs().topk(topk)
+            topk_indices = top.indices.to("cpu", non_blocking=nonblocking)
+            topk_values = top.values.to("cpu", non_blocking=nonblocking)
+            topks.append((topk_indices, topk_values))
+
+        # Build Proofs
+        torch.cuda.synchronize()
+        for topk_indices, topk_values in topks:
+            proofs.append(ProofPoly.from_points_tensor(topk_indices, topk_values))
+
     except Exception as e:
         logger.error(f"Error building proofs: {e}")
         proofs = [ProofPoly.null(topk)] * (

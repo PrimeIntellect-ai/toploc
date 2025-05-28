@@ -18,7 +18,7 @@ inline int safeMod(long long v) {
 
 /**
  * Compute the modular inverse of a (mod m) using
- * standart EEA. https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+ * standard EEA. https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
  * Throws if gcd(a, m) != 1.
  */
 int modInverse(int a, int m) {

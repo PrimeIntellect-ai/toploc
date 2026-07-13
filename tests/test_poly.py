@@ -76,6 +76,40 @@ def test_proof_poly_from_points_tensor():
     assert poly(3) == 6
 
 
+X_VALUES = [1, 2, 3]
+Y_VALUES = [4, 5, 6]
+
+
+@pytest.mark.parametrize("x_dtype", [torch.int32, torch.int64], ids=["int32", "int64"])
+@pytest.mark.parametrize(
+    "y_dtype",
+    [torch.bfloat16, torch.float16, torch.int32, torch.uint32, torch.int64],
+    ids=["bfloat16", "float16", "int32", "uint32", "int64"],
+)
+def test_proof_poly_from_points_tensor_dtypes(x_dtype, y_dtype):
+    x = torch.tensor(X_VALUES, dtype=x_dtype)
+    y = torch.tensor(Y_VALUES, dtype=y_dtype)
+    poly = ProofPoly.from_points_tensor(x, y)
+    assert isinstance(poly, ProofPoly)
+    assert len(poly.coeffs) == len(X_VALUES)
+    for xi, yi in zip(X_VALUES, Y_VALUES):
+        assert poly(xi) == yi
+
+
+def test_proof_poly_from_points_tensor_float32_raises():
+    x = torch.tensor(X_VALUES, dtype=torch.int32)
+    y = torch.tensor(Y_VALUES, dtype=torch.float32)
+    with pytest.raises(ValueError, match="float32 not supported"):
+        ProofPoly.from_points_tensor(x, y)
+
+
+def test_proof_poly_from_points_tensor_uint32_x_raises():
+    x = torch.tensor(X_VALUES, dtype=torch.uint32)
+    y = torch.tensor(Y_VALUES, dtype=torch.bfloat16)
+    with pytest.raises(ValueError, match="x must be an int32 or long tensor"):
+        ProofPoly.from_points_tensor(x, y)
+
+
 def test_proof_poly_from_points_bfloat16():
     """Test creation from bfloat16 tensor"""
     x = torch.tensor([1, 2, 3])
